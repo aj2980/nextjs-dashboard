@@ -1,36 +1,58 @@
-import { Card } from '@/app/ui/dashboard/cards';
-import RevenueChart from '@/app/ui/dashboard/revenue-chart';
-import LatestInvoices from '@/app/ui/dashboard/latest-invoices';
+import Pagination from '@/app/ui/invoices/pagination';
+import Search from '@/app/ui/search';
+import Table from '@/app/ui/invoices/table';
+import { CreateInvoice } from '@/app/ui/invoices/buttons';
 import { lusitana } from '@/app/ui/fonts';
-import {fetchRevenue, fetchLatestInvoices,fetchCardData} from '@/app/lib/data';
+import { InvoicesTableSkeleton } from '@/app/ui/skeletons';
+import { Suspense } from 'react';
+import { fetchInvoicesPages } from '@/app/lib/data';
  
-export default async function Page() {
-  const revenue=await fetchRevenue();
-  const latestInvoices=await fetchLatestInvoices();
-  const {numberOfCustomers,numberOfInvoices,totalPaidInvoices,totalPendingInvoices}=await fetchCardData();
+export default async function Page(props:
+    {
+        searchParams?:Promise<{query?:string; page?:string;}>
+    }
+) {
+    const searchParams = await props.searchParams;
+  const query = searchParams?.query || '';
+  const currentPage = Number(searchParams?.page) || 1;
+  const totalPages = await fetchInvoicesPages(query);
   return (
-    <main>
-      <h1 className={`${lusitana.className} mb-4 text-xl md:text-2xl`}>
-        Dashboard
-      </h1>
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        <Card title="Collected" value={totalPaidInvoices} type="collected" />
-        <Card title="Pending" value={totalPendingInvoices} type="pending" />
-        <Card title="Total Invoices" value={numberOfInvoices} type="invoices" />
-        <Card
-          title="Total Customers"
-          value={numberOfCustomers}
-          type="customers"
-        />
+    <div className="w-full">
+      <div className="flex w-full items-center justify-between">
+        <h1 className={`${lusitana.className} text-2xl`}>Invoices</h1>
       </div>
-      <h1>adding for sample testing</h1>
-      {/* <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-4 lg:grid-cols-8">
-        <RevenueChart revenue={revenue}  />
-        <LatestInvoices latestInvoices={latestInvoices} />
-      </div> */}
-    </main>
+      <div className="mt-4 flex items-center justify-between gap-2 md:mt-8">
+        <Search placeholder="Search invoices..." />
+        <CreateInvoice />
+      </div>
+       <Suspense key={query + currentPage} fallback={<InvoicesTableSkeleton />}>
+        <Table query={query} currentPage={currentPage} />
+      </Suspense>
+      <div className="mt-5 flex w-full justify-center">
+        <Pagination totalPages={totalPages} />
+      </div>
+    </div>
   );
 }
 
 // This is how you can create different pages in Next.js: create a new route segment 
 // using a folder, and add a page file inside it.
+
+
+// When to use the useSearchParams() hook vs. the searchParams prop?
+
+// You might have noticed you used two different ways to extract search params. Whether you use one or the other depends on whether you're working on the client or the server.
+
+// <Search> is a Client Component, so you used the useSearchParams() hook to access the params from the client.
+// <Table> is a Server Component that fetches its own data, so you can pass the searchParams prop from the page to the component.
+// As a general rule, if you want to read the params from the client, use the useSearchParams() hook as this avoids having to go back to the server.
+
+
+// What are Server Actions?
+// React Server Actions allow you to run asynchronous code directly on the server. They eliminate the need to create API endpoints to mutate your data. Instead, you write asynchronous functions that execute on the server and can be invoked from your Client or Server Components.
+
+// Security is a top priority for web applications, as they can be
+//  vulnerable to various threats. This is where Server Actions 
+// come in. They include features like encrypted closures, strict
+//  input checks, error message hashing, host restrictions, and more — all working together to significantly enhance 
+// your application security.
